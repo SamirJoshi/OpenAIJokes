@@ -1,1 +1,4 @@
 *.npy
+.DS_Store
+__pycache__
+joke-dataset/

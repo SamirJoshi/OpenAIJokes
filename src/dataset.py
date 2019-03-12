@@ -3,6 +3,7 @@ import json
 import numpy as np
 import argparse
 
+
 class Dataset:
     def __init__(self, identifier=''):
         self.jokes = []
@@ -34,21 +35,24 @@ class Dataset:
 
 def generate_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument('jokes_path', type=str, help='the pathname of the jokes dataset')
+    parser.add_argument('jokes_path',
+                        type=str,
+                        help='the pathname of the jokes dataset')
     parser.add_argument('--identifier',
-            type=str,
-            default='jokes_dataset',
-            help='an identifier for the dataset')
+                        type=str,
+                        default='jokes_dataset',
+                        help='an identifier for the dataset')
     parser.add_argument('--create_npy',
-            default=False,
-            action='store_true',
-            help='is the file of jokes a numpy cache')
+                        default=False,
+                        action='store_true',
+                        help='is the file of jokes a numpy cache')
     parser.add_argument('--display_info',
-            default=False,
-            action='store_true',
-            help='print the stats of the dataset after loading')
+                        default=False,
+                        action='store_true',
+                        help='print the stats of the dataset after loading')
 
     return parser
+
 
 if __name__ == '__main__':
     parser = generate_parser()
@@ -65,5 +69,3 @@ if __name__ == '__main__':
 
     if args.display_info:
         print(dataset)
-
-
