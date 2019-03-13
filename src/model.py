@@ -6,7 +6,11 @@ class JokeBaseModel(ABC):
         self.model = None
 
     @abstractmethod
-    def preprocess(self, data):
+    def preprocess_data(self, data):
+        pass
+
+    @abstractmethod
+    def train_model(self):
         pass
 
     @abstractmethod

@@ -12,7 +12,10 @@ class TestModel(unittest.TestCase):
             _ = JokeBaseModel()
     
         class ChildModel(JokeBaseModel):
-            def preprocess(self, data):
+            def preprocess_data(self, data):
+                return True
+
+            def train_model(self):
                 return True
 
             def generate_model(self):
@@ -21,8 +24,9 @@ class TestModel(unittest.TestCase):
             def generate_joke(self):
                 return True
 
-        data = [1, 2, 3]
+        sample_data = [1, 2, 3]
         child = ChildModel()
-        self.assertTrue(child.preprocess(data))
+        self.assertTrue(child.preprocess_data(sample_data))
+        self.assertTrue(child.train_model())
         self.assertTrue(child.generate_model())
         self.assertTrue(child.generate_joke())
