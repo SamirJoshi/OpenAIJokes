@@ -13,13 +13,13 @@ def load_tests(loader, test_modules, pattern):
 if __name__ == "__main__":
     import test.test_format as test_format
     import test.test_model as test_model
-    import test.test_simple_rnn_model as test_simple_rnn_model
+    import test.test_character_gru_model as test_character_gru_model
 
     loader = unittest.TestLoader()
     test_modules = [
         test_format.TestCodeFormat,
         test_model.TestModel,
-        test_simple_rnn_model.TestSimpleRnnModel
+        test_character_gru_model.TestCharacterGRUModel
     ]
     runner = unittest.TextTestRunner(verbosity=2)
     suite = load_tests(loader, test_modules, pattern=None)
