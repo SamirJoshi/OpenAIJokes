@@ -24,14 +24,13 @@ if __name__ == "__main__":
         vocab_size=vocab_size
     )
 
-    dataset.jokes = dataset.jokes[:50]
     gru.preprocess_data(dataset)
     gru.generate_model()
 
     # Bug: Cannot call train_model and generate_joke in the same process
     # Involves serializing tensors in deepcopy in generate_joke
     # Looking for an alternative to saving weights and generating a new model with the same settings but with a different batch size
-    
+
     loss = lambda labels, logits: tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
     history = gru.train_model(
         loss_function=loss,
@@ -39,9 +38,9 @@ if __name__ == "__main__":
         num_epochs=num_epochs
     )
 
-    # output = gru.generate_joke(
-    #     start_string="What ",
-    #     num_characters=100
-    # )
+    output = gru.generate_joke(
+        start_string="What ",
+        num_characters=100
+    )
 
     # print(output)

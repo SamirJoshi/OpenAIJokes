@@ -1,7 +1,6 @@
 import numpy as np
-import functools
 import tensorflow as tf
-import os
+from os import path
 from copy import deepcopy
 from src.model import JokeBaseModel
 
@@ -35,9 +34,8 @@ class JokeCharacterModel(JokeBaseModel):
 
         self.model.compile(optimizer=optimizer, loss=loss_function)
         self.dataset = self.dataset.shuffle(self.buffer_size).batch(self.batch_size, drop_remainder=True)
-
         
-        checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt_{epoch}")
+        checkpoint_prefix = path.join(checkpoint_dir, "ckpt_{epoch}")
         checkpoint_callback=tf.keras.callbacks.ModelCheckpoint(
             filepath=checkpoint_prefix,
             save_weights_only=True)
@@ -81,7 +79,6 @@ class JokeCharacterModel(JokeBaseModel):
             predictions = tf.squeeze(predictions, axis=0)
             predictions = predictions / temperature
 
-            print(predictions)
             # Draws single sample from a categorical distribution of all possible characters
             predicted_index = tf.random.categorical(predictions, num_samples=1)[-1,0].numpy()
 
@@ -102,7 +99,7 @@ class GruCharacterModel(JokeCharacterModel):
         if self.has_gpu_access:
             rnn =  rnn = tf.keras.layers.CuDNNGRU
         else:
-            rnn = functools.partial(tf.keras.layers.GRU, recurrent_activation='sigmoid')
+            rnn = tf.keras.layers.GRU
 
         self.model = tf.keras.Sequential([
             tf.keras.layers.Embedding(
