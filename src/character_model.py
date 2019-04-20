@@ -10,7 +10,6 @@ class JokeCharacterModel(JokeBaseModel):
         super(JokeCharacterModel, self).__init__()
         tf.enable_eager_execution()
 
-        self.has_gpu_access = tf.test.is_gpu_available()
         self.num_rnn_units = kwargs['num_rnn_units']
         self.batch_size = kwargs['batch_size']
         self.buffer_size = kwargs['buffer_size']
@@ -27,6 +26,10 @@ class JokeCharacterModel(JokeBaseModel):
     @staticmethod
     def decode_text(encoded_text):
         return "".join(list(map(chr, encoded_text)))
+
+    @staticmethod
+    def build(vocab_size, embedding_dim, num_rnn_units, batch_size):
+        raise NotImplementedError()
 
     def train_model(self, loss_function, optimizer, num_epochs, checkpoint_dir="train_checkpoints"):
         if not self.model:
@@ -64,18 +67,16 @@ class JokeCharacterModel(JokeBaseModel):
 
     def generate_joke(self, start_string, num_characters, temperature=1.0, checkpoint_dir="train_checkpoints"):
         # Build model that expects a single batch
-        m = deepcopy(self)
-        m.batch_size = 1
-        m.generate_model()
+        m = self.build(self.vocab_size, self.embedding_dim, self.num_rnn_units, 1)
 
         # Load previously trained weights from the last checkpoint
-        m.model.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
+        m.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
 
         text = []
         encoded_start_string = self.encode_text(start_string)
         input_vec = tf.expand_dims(encoded_start_string, axis=0)
         for i in range(num_characters):
-            predictions = m.model(input_vec)
+            predictions = m(input_vec)
             predictions = tf.squeeze(predictions, axis=0)
             predictions = predictions / temperature
 
@@ -95,24 +96,34 @@ class GruCharacterModel(JokeCharacterModel):
     def __init__(self, **kwargs):
         super(GruCharacterModel, self).__init__(**kwargs)
 
-    def generate_model(self):
-        if self.has_gpu_access:
-            rnn =  rnn = tf.keras.layers.CuDNNGRU
+    @staticmethod
+    def build(vocab_size, embedding_dim, num_rnn_units, batch_size):
+        if tf.test.is_gpu_available():
+            rnn = tf.keras.layers.CuDNNGRU
         else:
             rnn = tf.keras.layers.GRU
 
-        self.model = tf.keras.Sequential([
+        return tf.keras.Sequential([
             tf.keras.layers.Embedding(
-                self.vocab_size,
-                self.embedding_dim,
-                batch_input_shape=[self.batch_size, None]
+                vocab_size,
+                embedding_dim,
+                batch_input_shape=[batch_size, None]
             ),
             rnn(
-                self.num_rnn_units,
+                num_rnn_units,
                 return_sequences=True,
                 recurrent_initializer='glorot_uniform',
                 stateful=True
             ),
-            tf.keras.layers.Dense(self.vocab_size)
+            tf.keras.layers.Dense(vocab_size)
         ])
+
+    def generate_model(self):
+        self.model = self.build(
+            self.vocab_size,
+            self.embedding_dim,
+            self.num_rnn_units,
+            self.batch_size
+        )
+            
 
