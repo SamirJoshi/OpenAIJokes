@@ -13,7 +13,8 @@ if __name__ == "__main__":
     buffer_size   = 10000 # Size of buffer used to shuffle dataset
     vocab_size    = 256   # Size of lexicon from which we draw possible characters
     num_rnn_units = 1024  
-    num_epochs    = 5
+    num_epochs    = 2
+    temperature   = 1.0
 
     gru = GruCharacterModel(
         seq_length=seq_length,
@@ -36,7 +37,9 @@ if __name__ == "__main__":
 
     output = gru.generate_joke(
         start_string="What ",
-        num_characters=100
+        num_characters=100,
+        temperature=temperature,
+        load_weights=False
     )
 
     print(output)

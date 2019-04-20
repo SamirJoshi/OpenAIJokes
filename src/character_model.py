@@ -65,12 +65,18 @@ class JokeCharacterModel(JokeBaseModel):
         self.dataset = self.sequences.map(split_sequences_and_targets)
 
 
-    def generate_joke(self, start_string, num_characters, temperature=1.0, checkpoint_dir="train_checkpoints"):
+    def generate_joke(self, start_string, num_characters, temperature=1.0, load_weights=False, checkpoint_dir="train_checkpoints"):
         # Build model that expects a single batch
         m = self.build(self.vocab_size, self.embedding_dim, self.num_rnn_units, 1)
 
-        # Load previously trained weights from the last checkpoint
-        m.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
+        if load_weights:
+            # Load previously trained weights from the last checkpoint
+            m.load_weights(tf.train.latest_checkpoint(checkpoint_dir))
+        else:
+            if not self.model:
+                raise ValueError("Model not found. Execute train_model or set load_weights to True to load weights from a previous checkpoint")
+            else:
+                m.set_weights(self.model.get_weights())
 
         text = []
         encoded_start_string = self.encode_text(start_string)
