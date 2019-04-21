@@ -1,9 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from os import path
-from copy import deepcopy
 from src.model import JokeBaseModel
-
 
 class JokeCharacterModel(JokeBaseModel):
     def __init__(self, **kwargs):
@@ -15,32 +13,37 @@ class JokeCharacterModel(JokeBaseModel):
         self.buffer_size = kwargs['buffer_size']
         self.embedding_dim = kwargs['embedding_dim']
         self.seq_length = kwargs['seq_length']
+        self.dropout_rate = kwargs['dropout_rate']
         self.vocab_size = 0
         self.dataset = None
         self.model = None
         self.vocab = None
 
+    def __str__(self):
+        raise NotImplementedError()
+
     def create_vocab(self, jokes):
         vocab = set()
+        vocab.add(chr(3)) # end of text byte
         for joke in jokes:
             for c in joke['body']:
-                if (ord(c) < 128):
-                    vocab.add(c)
+                vocab.add(c)
 
         self.vocab = sorted(vocab)
         self.map_char_to_index = {u:i for i, u in enumerate(self.vocab)}
         self.index_to_char = np.array(self.vocab)
         self.vocab_size = len(self.vocab)
+        print("Vocab Size:", len(self.vocab))
 
-    def encode_text(self, text):
-        return np.array([self.map_char_to_index[c] if ord(c) < 128 else 0 for c in text])
+    def encode_text(self, text, terminate = False):
+        if terminate:
+            text = text + chr(3)
+        return np.array([self.map_char_to_index[c] for c in text])
 
-    @staticmethod
-    def decode_text(encoded_text):
-        return "".join(list(map(chr, encoded_text)))
+    def decode_text(self, encoded_text):
+        return "".join(list(map(lambda x: self.index_to_char[x], encoded_text)))
 
-    @staticmethod
-    def build(vocab_size, embedding_dim, num_rnn_units, batch_size):
+    def build(self, vocab_size, embedding_dim, num_rnn_units, batch_size):
         raise NotImplementedError()
 
     def train_model(self, loss_function, optimizer, num_epochs, checkpoint_dir="train_checkpoints"):
@@ -68,7 +71,7 @@ class JokeCharacterModel(JokeBaseModel):
         self.create_vocab(data.jokes)
         encoded_joke_text = []
         for joke in data.jokes:
-            encoded_joke_text.extend(self.encode_text(joke['body']))
+            encoded_joke_text.extend(self.encode_text(joke['body'], True))
 
         self.examples_per_epoch = len(encoded_joke_text) // self.seq_length
         self.sequences = tf.data.Dataset \
@@ -91,7 +94,7 @@ class JokeCharacterModel(JokeBaseModel):
             else:
                 m.set_weights(self.model.get_weights())
 
-        text = []
+        text_as_index = []
         encoded_start_string = self.encode_text(start_string)
         input_vec = tf.expand_dims(encoded_start_string, axis=0)
         for i in range(num_characters):
@@ -106,44 +109,9 @@ class JokeCharacterModel(JokeBaseModel):
             input_vec = tf.expand_dims([predicted_index], axis=0)
 
             # print("predicted index: %d, predicted char: %c, predicted value: %f" % (predicted_index, self.index_to_char[predicted_index], predictions[0, predicted_index]))
-            text.append(self.index_to_char[predicted_index])
+            text_as_index.append(predicted_index)
+            if (self.index_to_char[predicted_index] == chr(3)):
+                print('Reached ending chracter - terminating joke generation.')
+                break
 
-        return start_string + "".join(text)
-
-
-class GruCharacterModel(JokeCharacterModel):
-    def __init__(self, **kwargs):
-        super(GruCharacterModel, self).__init__(**kwargs)
-
-    @staticmethod
-    def build(vocab_size, embedding_dim, num_rnn_units, batch_size):
-        if tf.test.is_gpu_available():
-            rnn = tf.keras.layers.CuDNNGRU
-        else:
-            rnn = tf.keras.layers.GRU
-
-        return tf.keras.Sequential([
-            tf.keras.layers.Embedding(
-                vocab_size,
-                embedding_dim,
-                batch_input_shape=[batch_size, None]
-            ),
-            tf.keras.layers.Dropout(0.2),
-            rnn(
-                num_rnn_units,
-                return_sequences=True,
-                recurrent_initializer='glorot_uniform',
-                stateful=True
-            ),
-            tf.keras.layers.Dense(vocab_size)
-        ])
-
-    def generate_model(self):
-        self.model = self.build(
-            self.vocab_size,
-            self.embedding_dim,
-            self.num_rnn_units,
-            self.batch_size
-        )
-            
-
+        return start_string + self.decode_text(text_as_index)

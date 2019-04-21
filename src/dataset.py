@@ -3,7 +3,6 @@ import json
 import numpy as np
 import argparse
 
-
 class Dataset:
     def __init__(self, identifier=''):
         self.jokes = []
