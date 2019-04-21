@@ -15,13 +15,25 @@ class JokeCharacterModel(JokeBaseModel):
         self.buffer_size = kwargs['buffer_size']
         self.embedding_dim = kwargs['embedding_dim']
         self.seq_length = kwargs['seq_length']
-        self.vocab_size = kwargs['vocab_size']
+        self.vocab_size = 0
         self.dataset = None
         self.model = None
+        self.vocab = None
 
-    @staticmethod
-    def encode_text(text):
-        return [ord(c) for c in text]
+    def create_vocab(self, jokes):
+        vocab = set()
+        for joke in jokes:
+            for c in joke['body']:
+                if (ord(c) < 128):
+                    vocab.add(c)
+
+        self.vocab = sorted(vocab)
+        self.map_char_to_index = {u:i for i, u in enumerate(self.vocab)}
+        self.index_to_char = np.array(self.vocab)
+        self.vocab_size = len(self.vocab)
+
+    def encode_text(self, text):
+        return np.array([self.map_char_to_index[c] if ord(c) < 128 else 0 for c in text])
 
     @staticmethod
     def decode_text(encoded_text):
@@ -53,6 +65,7 @@ class JokeCharacterModel(JokeBaseModel):
 
 
     def preprocess_data(self, data):
+        self.create_vocab(data.jokes)
         encoded_joke_text = []
         for joke in data.jokes:
             encoded_joke_text.extend(self.encode_text(joke['body']))
@@ -87,15 +100,15 @@ class JokeCharacterModel(JokeBaseModel):
             predictions = predictions / temperature
 
             # Draws single sample from a categorical distribution of all possible characters
-            predicted_index = tf.random.categorical(predictions, num_samples=1)[-1,0].numpy()
+            predicted_index = tf.random.multinomial(predictions, num_samples=1)[-1,0].numpy()
 
             # Pass predicted character into next input
             input_vec = tf.expand_dims([predicted_index], axis=0)
 
-            print("predicted index: %d, predicted char: %c, predicted value: %f" % (predicted_index, chr(predicted_index), predictions[0, predicted_index]))
-            text.append(chr(predicted_index))
+            # print("predicted index: %d, predicted char: %c, predicted value: %f" % (predicted_index, self.index_to_char[predicted_index], predictions[0, predicted_index]))
+            text.append(self.index_to_char[predicted_index])
 
-        return "".join(text)
+        return start_string + "".join(text)
 
 
 class GruCharacterModel(JokeCharacterModel):
@@ -115,6 +128,7 @@ class GruCharacterModel(JokeCharacterModel):
                 embedding_dim,
                 batch_input_shape=[batch_size, None]
             ),
+            tf.keras.layers.Dropout(0.2),
             rnn(
                 num_rnn_units,
                 return_sequences=True,

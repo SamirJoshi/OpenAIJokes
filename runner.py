@@ -3,16 +3,16 @@ from src.character_model import GruCharacterModel
 from src.dataset import Dataset
 
 if __name__ == "__main__":
-    dataset = Dataset('wocka dataset')
-    dataset.load_from_npy_file('./wocka_dataset.npy')
+    dataset = Dataset('reddit dataset')
+    dataset.load_from_npy_file('./reddit_dataset.npy')
 
     # Model hyperparameters
-    seq_length    = 15
+    seq_length    = 30
     embedding_dim = 256
     batch_size    = 64 
     buffer_size   = 10000 # Size of buffer used to shuffle dataset
     vocab_size    = 256   # Size of lexicon from which we draw possible characters
-    num_rnn_units = 1024  
+    num_rnn_units = 1024
     num_epochs    = 2
     temperature   = 1.0
 
@@ -28,7 +28,7 @@ if __name__ == "__main__":
     gru.preprocess_data(dataset)
     gru.generate_model()
 
-    loss = lambda labels, logits: tf.keras.losses.sparse_categorical_crossentropy(labels, logits, from_logits=True)
+    loss = lambda labels, logits: tf.keras.backend.sparse_categorical_crossentropy(labels, logits, from_logits=True)
     history = gru.train_model(
         loss_function=loss,
         optimizer=tf.train.AdamOptimizer(),
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     )
 
     output = gru.generate_joke(
-        start_string="What ",
+        start_string="What",
         num_characters=100,
         temperature=temperature,
         load_weights=False
