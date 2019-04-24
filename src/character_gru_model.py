@@ -3,6 +3,7 @@ import tensorflow as tf
 from src.character_model import JokeCharacterModel
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
+
 class CharacterGruModel(JokeCharacterModel):
     def __init__(self, **kwargs):
         super(CharacterGruModel, self).__init__(**kwargs)
@@ -12,7 +13,7 @@ class CharacterGruModel(JokeCharacterModel):
         model_info += 'Identifier: Character GRU Model\n'
         model_info += 'Token type: Character\n'
         model_info += 'Model type: GRU\n'
-        if self.model != None:
+        if self.model is not None:
             model_info += 'Built: Yes\n'
             model_summary = []
             self.model.summary(print_fn=lambda x: model_summary.append(x))
@@ -24,7 +25,13 @@ class CharacterGruModel(JokeCharacterModel):
 
         return model_info
 
-    def build(self, vocab_size, embedding_dim, num_rnn_units, batch_size):
+    def build(
+        self,
+        vocab_size,
+        embedding_dim,
+        num_rnn_units,
+        batch_size
+    ):
         if tf.test.is_gpu_available():
             rnn = tf.keras.layers.CuDNNGRU
         else:
@@ -56,5 +63,3 @@ class CharacterGruModel(JokeCharacterModel):
             self.num_rnn_units,
             self.batch_size
         )
-            
-
