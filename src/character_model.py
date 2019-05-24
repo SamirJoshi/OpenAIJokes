@@ -2,7 +2,22 @@ import numpy as np
 import tensorflow as tf
 from os import path
 from src.model import JokeBaseModel
+import pprint
+import operator
+import pickle
 
+
+def save_data(vocab, encoded_joke_text, filename):
+    pickle_file = open(filename, 'wb')
+    pickle.dump([vocab, encoded_joke_text], pickle_file)
+    pickle_file.close()
+    return 
+
+def load_data(filename):
+    pickle_file = open(filename, 'rb')
+    data = pickle.load(pickle_file)
+    pickle_file.close()
+    return data
 
 class JokeCharacterModel(JokeBaseModel):
     def __init__(self, **kwargs):
@@ -32,14 +47,20 @@ class JokeCharacterModel(JokeBaseModel):
         raise NotImplementedError()
 
     def create_vocab(self, jokes):
-        vocab = set()
-        vocab.add(chr(3))  # end of text byte
+        vocab = {}
+        vocab[chr(3)] = 1  # end of text byte
         for joke in jokes:
-            for c in joke['body']:
-                vocab.add(c)
+            joke_chars = joke['title'] + ' ' + joke['body'] + chr(3)
+            for c in joke_chars:
+                if c in vocab:
+                    vocab[c] += 1
+                else:
+                    vocab[c] = 1
+        
 
-        self.vocab = sorted(vocab)
+        self.vocab = sorted(set(dict(sorted(vocab.items(), key=operator.itemgetter(1))[-92:])))
         self.map_char_to_index = {u: i for i, u in enumerate(self.vocab)}
+        # pprint.pprint(self.map_char_to_index)
         self.index_to_char = np.array(self.vocab)
 
     def encode_text(self, text, terminate=False):
@@ -50,7 +71,7 @@ class JokeCharacterModel(JokeBaseModel):
         # Add terminating character to indicate the end of a joke text
         if terminate:
             text = text + chr(3)
-        return np.array([self.map_char_to_index[c] for c in text])
+        return np.array([self.map_char_to_index[c] if c in self.map_char_to_index else 0 for c in text])
 
     def decode_text(self, encoded_text):
         return "".join(
@@ -66,7 +87,7 @@ class JokeCharacterModel(JokeBaseModel):
     ):
         if not self.model:
             raise NotImplementedError('Model hasn\'t been built')
-
+    
         self.model.compile(optimizer=optimizer, loss=loss_function)
         self.dataset = self.dataset \
             .shuffle(self.buffer_size) \
@@ -84,11 +105,22 @@ class JokeCharacterModel(JokeBaseModel):
 
         return history
 
-    def preprocess_data(self, data):
-        self.create_vocab(data.jokes)
+    def preprocess_data(self, data, cache_filename='', use_cache=False, save_cache=False):
         encoded_joke_text = []
-        for joke in data.jokes:
-            encoded_joke_text.extend(self.encode_text(joke['body'], True))
+        if use_cache and path.exists(cache_filename):
+            cached_data = load_data(cache_filename)    
+            self.vocab = cached_data[0]
+            encoded_joke_text = cached_data[1]
+        else:
+            self.create_vocab(data.jokes)
+            print("len jokes:", len(data.jokes))
+            for joke in data.jokes:
+                joke_chars = joke['title'] + ' ' + joke['body']
+                encoded_joke_text.extend(self.encode_text(joke_chars, True))
+
+            if save_cache:
+                print('saving cache')
+                save_data(self.vocab, encoded_joke_text, cache_filename)
 
         self.examples_per_epoch = len(encoded_joke_text) // self.seq_length
 

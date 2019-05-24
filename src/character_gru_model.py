@@ -4,15 +4,15 @@ from src.character_model import JokeCharacterModel
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 
 
-class CharacterGruModel(JokeCharacterModel):
+class CharacterLstmModel(JokeCharacterModel):
     def __init__(self, **kwargs):
-        super(CharacterGruModel, self).__init__(**kwargs)
+        super(CharacterLstmModel, self).__init__(**kwargs)
 
     def __str__(self):
         model_info = '******************** Model Info ********************\n'
-        model_info += 'Identifier: Character GRU Model\n'
+        model_info += 'Identifier: Character LSTM Model\n'
         model_info += 'Token type: Character\n'
-        model_info += 'Model type: GRU\n'
+        model_info += 'Model type: 3 layer LSTM\n'
         if self.model is not None:
             model_info += 'Built: Yes\n'
             model_summary = []
@@ -30,12 +30,11 @@ class CharacterGruModel(JokeCharacterModel):
         vocab_size,
         embedding_dim,
         num_rnn_units,
-        batch_size
-    ):
+        batch_size):
         if tf.test.is_gpu_available():
-            rnn = tf.keras.layers.CuDNNGRU
+            rnn = tf.keras.layers.CuDNNLSTM
         else:
-            rnn = tf.keras.layers.GRU
+            rnn = tf.keras.layers.LSTM
 
         layers = [
             tf.keras.layers.Embedding(
@@ -49,10 +48,31 @@ class CharacterGruModel(JokeCharacterModel):
                 recurrent_initializer='glorot_uniform',
                 stateful=True
             ),
-            tf.keras.layers.Dense(vocab_size)
+            rnn(
+                num_rnn_units,
+                return_sequences=True,
+                recurrent_initializer='glorot_uniform',
+                stateful=True
+            ),
+            rnn(
+                num_rnn_units,
+                return_sequences=True,
+                recurrent_initializer='glorot_uniform',
+                stateful=True
+            ),
+            rnn(
+                num_rnn_units,
+                return_sequences=True,
+                recurrent_initializer='glorot_uniform',
+                stateful=True
+            ),
+            tf.keras.layers.Dense(vocab_size, activation='relu')
         ]
         if self.dropout_rate > 0.0 and self.dropout_rate < 1.0:
             layers.insert(2, tf.keras.layers.Dropout(self.dropout_rate))
+            layers.insert(4, tf.keras.layers.Dropout(self.dropout_rate))
+            layers.insert(6, tf.keras.layers.Dropout(self.dropout_rate))
+            layers.insert(8, tf.keras.layers.Dropout(self.dropout_rate))
 
         return tf.keras.Sequential(layers)
 
