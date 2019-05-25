@@ -60,7 +60,6 @@ class JokeCharacterModel(JokeBaseModel):
 
         self.vocab = sorted(set(dict(sorted(vocab.items(), key=operator.itemgetter(1))[-92:])))
         self.map_char_to_index = {u: i for i, u in enumerate(self.vocab)}
-        # pprint.pprint(self.map_char_to_index)
         self.index_to_char = np.array(self.vocab)
 
     def encode_text(self, text, terminate=False):

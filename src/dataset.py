@@ -27,9 +27,6 @@ class Dataset:
         with open(path, 'r', encoding='utf-8') as json_file:
             self.jokes = np.asarray(json.load(json_file))
             self.jokes = np.asarray(list(filter(lambda joke: joke['score'] > 10, self.jokes)))
-            print("jokes length:", len(self.jokes))
-            # self.jokes = np.concatenate((self.jokes, np.asarray(list(filter(lambda joke: joke['score'] > 500, self.jokes)))))
-            # print("jokes length:", len(self.jokes))
 
 
     def load_from_npy_file(self, path):

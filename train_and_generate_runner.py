@@ -8,6 +8,48 @@ import pickle
 def generate_start_string(dataset):
     return dataset.starting_words[random.randint(0, len(dataset.starting_words)-1)]
 
+def generate_single_joke(model, start_string, temperature, num_chars):
+    return model.generate_joke(
+        start_string=start_string,
+        num_characters=num_chars,
+        temperature=temperature,
+        load_weights=True
+    )
+
+def define_model():
+    dataset = Dataset('reddit 10 dataset')
+    dataset.load_from_npy_file('./reddit10_dataset.npy')
+
+    seq_length = 50
+    embedding_dim = 256
+    batch_size = 256
+    buffer_size = 10000
+    num_units = 256
+    dropout_rate = 0.0
+
+    model = CharacterLstmModel(
+        seq_length=seq_length,
+        embedding_dim=embedding_dim,
+        batch_size=batch_size,
+        buffer_size=buffer_size,
+        num_rnn_units=num_units,
+        dropout_rate=dropout_rate
+    )
+
+    model.preprocess_data(dataset)
+    model.generate_model()
+    return model
+
+
+def joke_generator(temperature, num_chars, model=None, start_string='The'):
+    if model == None:
+        model = define_model()
+
+    return generate_single_joke(model, start_string, temperature, num_chars)
+
+
+# alot of the content in main below should be updated with the functions above
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--train', default=False, action='store_true', help='train')
