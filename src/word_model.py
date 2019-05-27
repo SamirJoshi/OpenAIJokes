@@ -30,7 +30,7 @@ class JokeWordModel(JokeBaseModel):
         # We should find a more descriptive regex that includes conjunctions but excludes singular quotation marks
         # The regex takes a broader approach by accepting conjunctions and lone quotation marks. Quotation marks need to be removed in a second step.
         words = findall(r"[\w']+", text.strip().lower())
-        return [word for word in words if word != "''"]
+        return [word for word in words if word != "'"]
 
     def create_vocab(self, jokes):
         vocab = set()
