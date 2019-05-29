@@ -2,6 +2,8 @@
 import json
 import numpy as np
 import argparse
+import pprint
+import operator
 
 
 class Dataset:
@@ -21,12 +23,24 @@ class Dataset:
     def num_jokes(self):
         return len(self.jokes)
 
-    def load_from_json(self, path):
+    def load_from_json(self, path, identifier):
         with open(path, 'r', encoding='utf-8') as json_file:
             self.jokes = np.asarray(json.load(json_file))
+            self.jokes = np.asarray(list(filter(lambda joke: joke['score'] > 10, self.jokes)))
+
 
     def load_from_npy_file(self, path):
         self.jokes = np.load(path)
+        self.starting_words = {}
+        for joke in self.jokes:
+            starting_word = joke['title'].split(' ', 1)[0]
+            if starting_word in self.starting_words:
+                self.starting_words[starting_word] += 1
+            else:
+                self.starting_words[starting_word] = 1
+
+        self.starting_words = list(dict(sorted(self.starting_words.items(), key=operator.itemgetter(1))[-25:]))
+
 
     def write_to_npy_file(self, path=''):
         filename = path + self.identifier + '_dataset.npy'
@@ -63,7 +77,7 @@ if __name__ == '__main__':
     if file_ext == 'npy':
         dataset.load_from_npy_file(args.jokes_path)
     else:
-        dataset.load_from_json(args.jokes_path)
+        dataset.load_from_json(args.jokes_path, args.identifier)
         if args.create_npy:
             dataset.write_to_npy_file()
 

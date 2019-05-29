@@ -1,45 +1,112 @@
 import tensorflow as tf
-from src.character_gru_model import CharacterGruModel
+from src.character_gru_model import CharacterLstmModel
 from src.dataset import Dataset
+import argparse
+import random
+import pickle
 
-if __name__ == "__main__":
-    dataset = Dataset('wocka dataset')
-    dataset.load_from_npy_file('./wocka_dataset.npy')
+def generate_start_string(dataset):
+    return dataset.starting_words[random.randint(0, len(dataset.starting_words)-1)]
 
-    # Model hyperparameters
-    seq_length    = 30
-    embedding_dim = 256
-    batch_size    = 64 
-    buffer_size   = 10000 # Size of buffer used to shuffle dataset
-    num_rnn_units = 1024
-    num_epochs    = 5
-    temperature   = 0.75
-    dropout_rate = 0.0
-
-    gru = CharacterGruModel(
-        seq_length=seq_length,
-        embedding_dim=embedding_dim,
-        batch_size=batch_size,
-        buffer_size=buffer_size,
-        num_rnn_units=num_rnn_units,
-        dropout_rate=dropout_rate
-    )
-
-    gru.preprocess_data(dataset)
-    gru.generate_model()
-
-    loss = lambda labels, logits: tf.keras.backend.sparse_categorical_crossentropy(labels, logits, from_logits=True)
-    history = gru.train_model(
-        loss_function=loss,
-        optimizer=tf.train.AdamOptimizer(),
-        num_epochs=num_epochs
-    )
-
-    output = gru.generate_joke(
-        start_string="The",
-        num_characters=100,
+def generate_single_joke(model, start_string, temperature, num_chars):
+    return model.generate_joke(
+        start_string=start_string,
+        num_characters=num_chars,
         temperature=temperature,
         load_weights=True
     )
 
-    print(output)
+def define_model():
+    dataset = Dataset('reddit 10 dataset')
+    dataset.load_from_npy_file('./reddit10_dataset.npy')
+
+    seq_length = 50
+    embedding_dim = 256
+    batch_size = 256
+    buffer_size = 10000
+    num_units = 256
+    dropout_rate = 0.0
+
+    model = CharacterLstmModel(
+        seq_length=seq_length,
+        embedding_dim=embedding_dim,
+        batch_size=batch_size,
+        buffer_size=buffer_size,
+        num_rnn_units=num_units,
+        dropout_rate=dropout_rate
+    )
+
+    model.preprocess_data(dataset)
+    model.generate_model()
+    return model
+
+
+def joke_generator(temperature, num_chars, model=None, start_string='The'):
+    if model == None:
+        model = define_model()
+
+    return generate_single_joke(model, start_string, temperature, num_chars)
+
+
+# alot of the content in main below should be updated with the functions above
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--train', default=False, action='store_true', help='train')
+
+    # Model hyperparameters
+    parser.add_argument('--seq_length', default=50, type=int, help='Sequence length')
+    parser.add_argument('--embedding_dim', default=256, type=int, help='Embedding dimension')
+    parser.add_argument('--batch_size', default=256, type=int, help='Batch size')
+    parser.add_argument('--buffer_size', default=10000, type=int, help='Buffer size')
+    parser.add_argument('--num_units', default=256, type=int, help='Number of units per layer')
+    parser.add_argument('--num_epochs', default=5, type=int, help='Number of epochs')
+    parser.add_argument('--dropout_rate', default=0.0, type=float, help='Dropout rate 0.0 <= dropout_rate < 1.0')
+
+    # Jokes Generation parameters
+    parser.add_argument('--temperature', default=0.5, type=float, help='Temperature')
+    parser.add_argument('--num_chars', default=100, type=int, help='Max number of characters to generate')
+    args = parser.parse_args()
+
+    print("train:", args.train)
+    print("temperature:", args.temperature)
+    print("number of characters:", args.num_chars)
+
+    dataset = Dataset('reddit 10 dataset')
+    dataset.load_from_npy_file('./reddit10_dataset.npy')
+
+    gru = CharacterLstmModel(
+        seq_length=args.seq_length,
+        embedding_dim=args.embedding_dim,
+        batch_size=args.batch_size,
+        buffer_size=args.buffer_size,
+        num_rnn_units=args.num_units,
+        dropout_rate=args.dropout_rate
+    )
+
+    # gru.preprocess_data(dataset_10_plus, './reddit10_dataset_processed.pickle', True, True)
+    gru.preprocess_data(dataset)
+    gru.generate_model()
+    print(gru)
+
+    if args.train:
+        loss = lambda labels, logits: tf.keras.backend.sparse_categorical_crossentropy(labels, logits, from_logits=True)
+        history = gru.train_model(
+            loss_function=loss,
+            optimizer=tf.train.AdamOptimizer(),
+            num_epochs=args.num_epochs
+        )
+
+    for i in range(0, 10):
+        output = gru.generate_joke(
+            start_string=generate_start_string(dataset),
+            num_characters=args.num_chars,
+            temperature=args.temperature,
+            load_weights=True
+        )
+
+        print('______________________________________________')
+        print('\n')
+        print(output)
+        print('\n')
+        print('_____________________________________________')

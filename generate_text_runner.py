@@ -13,8 +13,8 @@ if __name__ == "__main__":
     buffer_size   = 10000 # Size of buffer used to shuffle dataset
     num_rnn_units = 1024
     num_epochs    = 8
-    temperature   = 0.8
-    dropout_rate = 0.0
+    temperature   = 0.65
+    dropout_rate = 0.2
 
     gru = CharacterGruModel(
         seq_length=seq_length,
